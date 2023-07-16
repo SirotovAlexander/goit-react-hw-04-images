@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import Searchbar from './Searchbar/Searchbar';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import { Button } from './Button/Button';
@@ -9,88 +9,72 @@ import getInfoFromApi from './GetUsersAPI/getUser';
 import Notiflix from 'notiflix';
 import css from './App.module.css';
 
-export class App extends Component {
-  state = {
-    hits: [],
-    query: '',
-    page: 1,
-    totalHits: 0,
-    modalPic: '',
-    isLoading: false,
-    showModal: false,
-  };
+export const App = () => {
+  const [hits, setHits] = useState([]);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [totalHits, setTotalHits] = useState(0);
+  const [modalPic, setModalPic] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
-  componentDidUpdate(_, prevState) {
-    if (
-      this.state.page !== prevState.page ||
-      this.state.query !== prevState.query
-    ) {
-      this.setState({ isLoading: true });
-      return getInfoFromApi(this.state.query, this.state.page)
+  useEffect(() => {
+    if (page || query) {
+      setIsLoading(true);
+      getInfoFromApi(query, page)
         .then(response => {
           if (response.hits.length === 0) {
             return Notiflix.Notify.failure('Please add valid property');
           }
-          this.setState(prevState => ({
-            hits: [...prevState.hits, ...response.hits],
-            totalHits: response.totalHits,
-          }));
+          setHits(prev => [...prev, ...response.hits]);
+          setTotalHits(response.totalHits);
         })
         .catch(error => {
           Notiflix.Notify.failure(error.message);
         })
-        .finally(() => this.setState({ isLoading: false }));
+        .finally(() => setIsLoading(false));
     }
-  }
+  }, [query, page]);
 
-  hendleSubmit = data => {
-    if (data === this.state.query) {
+  const hendleSubmit = data => {
+    if (data === query) {
       return Notiflix.Notify.failure(
         'You already got information by this request'
       );
-    } else if (data !== this.state.query) {
-      return this.setState({ hits: [], page: 1, query: data });
+    } else if (data !== query) {
+      setHits([]);
+      setPage(1);
+      setQuery(data);
+      return;
     }
   };
 
-  hendleClick = () => {
-    this.setState(prevState => {
-      return { page: prevState.page + 1 };
-    });
+  const hendleClick = () => {
+    setPage(prev => prev + 1);
+  };
+  const hendleModalClose = () => {
+    setShowModal(false);
+    setModalPic('');
   };
 
-  hendleModalClose = () => {
-    this.setState({
-      showModal: false,
-      modalPic: '',
-    });
+  const hendleModalOpen = data => {
+    setModalPic(data);
+    setShowModal(true);
   };
 
-  hendleModalOpen = data => {
-    this.setState({
-      modalPic: data,
-      showModal: true,
-    });
-  };
-
-  loadMoreTotal = () => this.state.page < Math.ceil(this.state.totalHits / 12);
-
-  render() {
-    const { hits, isLoading, showModal, modalPic } = this.state;
-    const buttonCheck = this.loadMoreTotal();
-
-    return (
-      <div className={css.App}>
-        <Searchbar onSubmit={this.hendleSubmit} />
-        {isLoading && <Loader />}
-        {hits.length > 0 && (
-          <ImageGallery hits={this.state.hits} onClick={this.hendleModalOpen} />
-        )}
-        {hits.length > 0 && buttonCheck && !isLoading && (
-          <Button onClick={this.hendleClick} />
-        )}
-        {showModal && <Modal pic={modalPic} onClose={this.hendleModalClose} />}
-      </div>
-    );
-  }
-}
+  const loadMoreTotal = () => page < Math.ceil(totalHits / 12);
+  const buttonCheck = loadMoreTotal();
+  return (
+    <div className={css.App}>
+      <Searchbar onSubmit={hendleSubmit} />
+      {isLoading && <Loader />}
+      {hits.length > 0 && (
+        <ImageGallery hits={hits} onClick={hendleModalOpen} />
+      )}
+      {hits.length > 0 && buttonCheck && !isLoading && (
+        <Button onClick={hendleClick} />
+      )}
+      {showModal && <Modal pic={modalPic} onClose={hendleModalClose} />}
+    </div>
+  );
+};
