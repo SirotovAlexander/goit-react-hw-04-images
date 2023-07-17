@@ -9,17 +9,15 @@ export const Modal = ({ pic, onClose }) => {
     }
   };
 
-  const handleEsc = ({ code }) => {
-    if (code === 'Escape') onClose();
-  };
-
   useEffect(() => {
+    const handleEsc = ({ code }) => {
+      if (code === 'Escape') onClose();
+    };
     document.addEventListener('keydown', handleEsc);
     return () => {
       document.removeEventListener('keydown', handleEsc);
     };
-    // eslint-disable-next-line
-  }, []);
+  }, [onClose]);
 
   return (
     <div className={css.Overlay} onClick={handleClick}>
